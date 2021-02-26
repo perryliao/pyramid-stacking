@@ -24,14 +24,23 @@ data Result = EndOfGame State Bool
 type Game = [Char] -> [Char] -> State -> Result
 game :: Game
 game key val (State decks tree)
-  | gameOver new_decks = EndOfGame (State new_decks new_tree) ((length (new_decks!!0)) == 0)
-  | otherwise          = ContinueGame (State new_decks new_tree)
+  | gameOver new_decks new_tree = EndOfGame (State new_decks new_tree) ((length (new_decks!!0)) == 0)
+  | otherwise                   = ContinueGame (State new_decks new_tree)
   where
     (State new_decks new_tree) = updateGameState key val (State decks tree)
 
 -- checks if the game is over
-gameOver :: [[Char]] -> Bool
-gameOver decks = foldr (||) False (map (\x -> x==0) (map length decks))
+gameOver :: [[Char]] -> BSTree [Char] [Char] -> Bool
+gameOver decks board = (foldr (||) False (map (noValidMoves board) decks))
+  where
+    -- returns True of there are no more valid moves, and game should be over.
+    noValidMoves :: BSTree [Char] [Char] -> [Char] -> Bool
+    noValidMoves _ [] = True
+    noValidMoves (Node k v Empty Empty) deck = (v /= dummyVar)
+    noValidMoves (Node k v lt@(Node kl vl llt lrt) rt@(Node kr vr rlt rrt)) deck
+      | (v == dummyVar) && (((vl!!0) `elem` deck) || ((vr!!0) `elem` deck)) && (vl /= dummyVar) && (vr /= dummyVar) = False
+      | otherwise = (noValidMoves lt deck) && (noValidMoves rt deck)
+
 
 -- updateGameState creates the next iteration of the game state
 updateGameState :: [Char] -> [Char] -> State -> State
@@ -57,7 +66,7 @@ initTree :: Int -> Int -> BSTree [Char] [Char]
 initTree numTokens numPlayers = createNode 0 0 (getSlotLimit numTokens numPlayers)
   where
     createNode id currentDepth maxNodes
-      | (2^currentDepth - 1) > maxNodes = Empty
+      | (2^currentDepth - 1) >= maxNodes = Empty
       | otherwise = (Node ([alpha!!currentDepth] ++ (show id)) dummyVar (createNode (2 * id) (currentDepth + 1) maxNodes) (createNode (2 * id + 1) (currentDepth + 1) maxNodes))
 
 -- calculates the depth of the given tree
