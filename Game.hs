@@ -1,6 +1,8 @@
 module Game where
 
 import BSTree
+import Data.List
+import Data.Maybe
 
 alpha = ['A'..'Z']
 
@@ -57,3 +59,29 @@ printTree tree = printTreeHelper 0 (findDepth tree) tree
       | d == (maxDepth - 1) =
         do
           printTreeAtDepth d tree
+
+-- Calculates the raw value of this node
+determineOrder :: [Char] -> Int
+determineOrder k = (2^(fromJust (elemIndex (k!!0) alpha))-1) + (read (tail k) :: Int) + 1
+
+-- Calculate if the target key is on the left side of the current key
+shouldSplitLeft :: [Char] -> [Char] -> Bool
+shouldSplitLeft currentKey targetKey = do
+  let diff = ((fromJust (elemIndex (targetKey!!0) alpha))-1) - ((fromJust (elemIndex (currentKey!!0) alpha))-1)
+  let val = determineOrder currentKey
+  let target = determineOrder targetKey
+  target < (val * 2^diff) + 2^(diff - 1)
+
+-- insertBoard key val tree   returns the tree that results from inserting key with value into tree
+insertBoard key val (Node k v Empty Empty)
+    | (key == k) && (v == "*") = Node key val Empty Empty
+    | otherwise = Node k v Empty Empty
+insertBoard key val (Node k0 v0 lt@(Node k1 v1 lt1 rt1) rt@(Node k2 v2 lt2 rt2))
+    | (key == k0) && (v0 == "*") && (((v1 /= val) || (v2 /= val)) && (v1 /= "*") && (v2 /= "*")) = Node key val lt rt
+    | [k0!!0] < [key!!0] = do
+      if (shouldSplitLeft k0 key)
+        then
+          (Node k0 v0 (insertBoard key val lt) rt)
+        else
+          (Node k0 v0 lt (insertBoard key val rt))
+    | otherwise = Node k0 v0 lt rt
