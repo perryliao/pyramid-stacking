@@ -21,6 +21,25 @@ data Result = EndOfGame State Bool
             | ContinueGame State
         deriving (Eq, Show)
 
+type Game = [Char] -> [Char] -> State -> Result
+game :: Game
+game key val (State decks tree)
+  | gameOver new_decks = EndOfGame (State new_decks new_tree) ((length (new_decks!!0)) == 0)
+  | otherwise          = ContinueGame (State new_decks new_tree)
+  where
+    (State new_decks new_tree) = updateGameState key val (State decks tree)
+
+-- checks if the game is over
+gameOver :: [[Char]] -> Bool
+gameOver decks = foldr (||) False (map (\x -> x==0) (map length decks))
+
+-- updateGameState creates the next iteration of the game state
+updateGameState :: [Char] -> [Char] -> State -> State
+updateGameState k v (State (playerHand:restOfDecks) t) = do
+  let newTree = insertBoard k v t
+  let newDeck = (useHand (v!!0) playerHand) : restOfDecks
+  (State newDeck newTree)
+
 
 -- getSlotLimit numTokens
 -- given the amount of tokens players have, and the number of players,
@@ -89,17 +108,20 @@ shouldSplitLeft currentKey targetKey = do
   target < (val * 2^diff) + 2^(diff - 1)
 
 -- returns if it's possible to place the val on the selected key
+canPlaceOnTree :: [Char] -> [Char] -> BSTree [Char] [Char] -> Bool
 canPlaceOnTree key val (Node k v Empty Empty) = v == dummyVar
-
 canPlaceOnTree key val (Node k0 v0 lt@(Node k1 v1 lt1 rt1) rt@(Node k2 v2 lt2 rt2))
   | key == k0 = (v0 == dummyVar) && (((v1 == val) || (v2 == val)) && (v1 /= dummyVar) && (v2 /= dummyVar))
-  | otherwise = do
-      if (shouldSplitLeft k0 key)
-        then
-          canPlaceOnTree key val lt
-        else
-          canPlaceOnTree key val rt
+  | (shouldSplitLeft k0 key) = canPlaceOnTree key val lt
+  | otherwise = canPlaceOnTree key val rt
 
+-- returns if the given key exists in the given tree
+keyExistsInTree :: [Char] -> BSTree [Char] [Char] -> Bool
+keyExistsInTree key (Node k v Empty Empty) = key == k
+keyExistsInTree key (Node k v lt rt)
+  | key == k = True
+  | (shouldSplitLeft k key) = keyExistsInTree key lt
+  | otherwise = keyExistsInTree key rt
 
 -- insertBoard key val tree
 -- returns the tree that results from inserting key with value into tree
