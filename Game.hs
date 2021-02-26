@@ -3,8 +3,24 @@ module Game where
 import BSTree
 import Data.List
 import Data.Maybe
+import System.Random
+import Control.Monad
+import System.IO.Unsafe
 
 alpha = ['A'..'Z']
+dummyVar = "."
+specialChars = "!@#$%&"
+
+-- Current state of the game
+-- [[Char]] a list of player's hands
+-- BSTree the current state of the board
+data State = State [[Char]] (BSTree [Char] [Char])
+        deriving (Eq, Show)
+
+data Result = EndOfGame State Bool
+            | ContinueGame State
+        deriving (Eq, Show)
+
 
 -- getSlotLimit numTokens
 -- given the amount of tokens players have, and the number of players,
@@ -23,7 +39,7 @@ initTree numTokens numPlayers = createNode 0 0 (getSlotLimit numTokens numPlayer
   where
     createNode id currentDepth maxNodes
       | (2^currentDepth - 1) > maxNodes = Empty
-      | otherwise = (Node ([alpha!!currentDepth] ++ (show id)) "*" (createNode (2 * id) (currentDepth + 1) maxNodes) (createNode (2 * id + 1) (currentDepth + 1) maxNodes))
+      | otherwise = (Node ([alpha!!currentDepth] ++ (show id)) dummyVar (createNode (2 * id) (currentDepth + 1) maxNodes) (createNode (2 * id + 1) (currentDepth + 1) maxNodes))
 
 -- calculates the depth of the given tree
 findDepth :: BSTree k v -> Int
@@ -72,16 +88,69 @@ shouldSplitLeft currentKey targetKey = do
   let target = determineOrder targetKey
   target < (val * 2^diff) + 2^(diff - 1)
 
--- insertBoard key val tree   returns the tree that results from inserting key with value into tree
-insertBoard key val (Node k v Empty Empty)
-    | (key == k) && (v == "*") = Node key val Empty Empty
-    | otherwise = Node k v Empty Empty
-insertBoard key val (Node k0 v0 lt@(Node k1 v1 lt1 rt1) rt@(Node k2 v2 lt2 rt2))
-    | (key == k0) && (v0 == "*") && (((v1 /= val) || (v2 /= val)) && (v1 /= "*") && (v2 /= "*")) = Node key val lt rt
-    | [k0!!0] < [key!!0] = do
+-- returns if it's possible to place the val on the selected key
+canPlaceOnTree key val (Node k v Empty Empty) = v == dummyVar
+
+canPlaceOnTree key val (Node k0 v0 lt@(Node k1 v1 lt1 rt1) rt@(Node k2 v2 lt2 rt2))
+  | key == k0 = (v0 == dummyVar) && (((v1 == val) || (v2 == val)) && (v1 /= dummyVar) && (v2 /= dummyVar))
+  | otherwise = do
       if (shouldSplitLeft k0 key)
         then
-          (Node k0 v0 (insertBoard key val lt) rt)
+          canPlaceOnTree key val lt
         else
-          (Node k0 v0 lt (insertBoard key val rt))
-    | otherwise = Node k0 v0 lt rt
+          canPlaceOnTree key val rt
+
+
+-- insertBoard key val tree
+-- returns the tree that results from inserting key with value into tree
+insertBoard key val (Node k v Empty Empty)
+  | (key == k) && (v == dummyVar) = Node key val Empty Empty
+  | otherwise = Node k v Empty Empty
+insertBoard key val (Node k0 v0 lt@(Node k1 v1 lt1 rt1) rt@(Node k2 v2 lt2 rt2))
+  | (key == k0) && (v0 == dummyVar) && (((v1 == val) || (v2 == val)) && (v1 /= dummyVar) && (v2 /= dummyVar)) = Node key val lt rt
+  | [k0!!0] < [key!!0] = do
+    if (shouldSplitLeft k0 key)
+      then
+        (Node k0 v0 (insertBoard key val lt) rt)
+      else
+        (Node k0 v0 lt (insertBoard key val rt))
+  | otherwise = Node k0 v0 lt rt
+
+-- pick a random value from a given list
+rand :: [a] -> IO a
+rand lst = do
+  i <- randomRIO(0, (length lst) - 1)
+  return $ lst !! i
+
+-- generateHand n
+-- creates a player's hand with n number of characters
+generateHand :: Int -> [Char]
+generateHand 0 = ""
+generateHand n = [(unsafePerformIO (rand specialChars))] ++ (generateHand (n-1))
+
+-- create all players hands
+generateAllHands :: Int -> Int -> [[Char]]
+generateAllHands 0 _ = []
+generateAllHands numPlayers size = (generateHand size) : generateAllHands (numPlayers-1) size
+
+-- generate the updated hand after placing a piece on the board
+useHand :: Char -> [Char] -> [Char]
+useHand val (x:xs)
+  | val == x = xs
+  | otherwise = x : (useHand val xs)
+
+-- returns if it's possible to play the selected character in the hand
+canPlayHand :: Char -> [Char] -> Bool
+canPlayHand val [] = False
+canPlayHand val (x:xs)
+  | val == x = True
+  | otherwise = (canPlayHand val xs)
+
+-- fixdel removes deleted elements from string
+-- from A3 solutions
+fixdel st
+   | '\DEL' `elem` st = fixdel (remdel st)
+   | otherwise = st
+remdel ('\DEL':r) = r
+remdel (a:'\DEL':r) = r
+remdel (a:r) = a: remdel r

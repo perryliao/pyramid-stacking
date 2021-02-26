@@ -7,7 +7,7 @@ module BSTree where
 -- ghci
 -- :load BSTree
 
--- a binary search tree 
+-- a binary search tree
 data BSTree k v = Empty
                 | Node k v (BSTree k v) (BSTree k v)
          deriving (Show, Read)
@@ -29,7 +29,7 @@ tolist (Node key val lt rt) =
 --- Defining Equality for Trees:
 instance (Eq k,Eq v) => Eq (BSTree k v) where
    t1 == t2 = tolist t1 == tolist t2
-   
+
 
 
 
@@ -69,10 +69,10 @@ insertv key val (Node k1 v1 lt rt)
     | key < k1 = let (res,nt) = insertv key val lt
                  in (res, Node k1 v1 nt rt)
     | key > k1 = let (res,nt) = insertv key val rt
-                 in (res, Node k1 v1 lt nt) 
+                 in (res, Node k1 v1 lt nt)
 
 -- try:
--- insertv 6 "six" egtree 
+-- insertv 6 "six" egtree
 -- insertv 4 "me" (snd it)
 
 
