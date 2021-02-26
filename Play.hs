@@ -1,48 +1,48 @@
 module Play where
 
 import Game
+import Tree
+import Deck
 import BSTree
 import System.Random
 import System.IO
 import Data.Typeable
 import Control.Exception
+import Data.Char
 
 numPlayers = 2
 
 -- start the game
-go :: IO Integer
+go :: IO ()
 go = do main
 
-main :: IO Integer
+main :: IO ()
 main =
   do
-    putStrLn "\n\nPyramid Stacking Game\n\n1 - Play\n2 - How To Play\nq - Quit game\n"
+    putStrLn "\nPyramid Stacking Game\n\n1 - Play\n2 - How To Play\nq - Quit game\n"
     option <- getLine
     if (fixdel option) == "q"
     then do
-      return 0
+      putStrLn "\nSee you next time!\n"
     else do
       v <- start (fixdel option)
       main
 
-start :: [Char] -> IO Integer
+start :: [Char] -> IO ()
 start "1" =
   do
     handSize <- getMaxHand
     let hands = generateAllHands numPlayers (fromIntegral handSize)
     let board = initTree (fromIntegral handSize) numPlayers
-    res <- play (ContinueGame (State hands board))
-    return 0
+    play (ContinueGame (State hands board))
 
 start "2" =
   do
-    putStrLn "\nStarting the game: Select the deck size. The larger the deck will generate a larger board.\nTo insert a value, type the coordinates and the character you wish to add, if it's in your hand."
-    return 0
+    putStrLn "\nStarting the game: Select the deck size. The larger the deck will generate a larger board.\nTo insert a value, type the coordinates and the character you wish to add, if it's in your hand.\nThe first player to exhaust their entire hand, or the player with the smallest hand at the end of the game wins!\n"
 
 start _ =
   do
     putStrLn "\nInvalid option\n"
-    return 0
 
 
 getMaxHand :: IO Integer
@@ -64,12 +64,12 @@ getMaxHand =
         then
           return val
         else
-          -- shouldn't get here... go to the error handler
-          return val
+          -- numbers <1 go here
+          return 1
 
 
 
-play :: Result -> IO Integer
+play :: Result -> IO ()
 play (ContinueGame (State decks tree)) =
   do
     putStrLn ("\n")
@@ -77,20 +77,21 @@ play (ContinueGame (State decks tree)) =
     putStrLn ("\nYour hand: " ++ decks!!0)
     line <- getLine
     let cmd = words (fixdel line)
-    if ((length cmd) == 2) && (keyExistsInTree (cmd!!0) tree)
+    let key = map toUpper (cmd!!0)
+    if ((length cmd) == 2) && (keyExistsInTree key tree)
       then do
-        if not (keyExistsInTree (cmd!!0) tree) then do
-          putStrLn((cmd!!0) ++ " is not a valid key on the board. Try a different value.\n")
+        if not (keyExistsInTree key tree) then do
+          putStrLn(key ++ " is not a valid key on the board. Try a different value.\n")
           play (ContinueGame (State decks tree))
         else if not (canPlayHand ((cmd!!1)!!0) (decks!!0)) then do
           putStrLn((cmd!!1) ++ " cannot be played from your current hand. Try a different value.\n")
           play (ContinueGame (State decks tree))
-        else if not (canPlaceOnTree (cmd!!0) (cmd!!1) tree) then do
-          putStrLn((cmd!!1) ++ " at position " ++ (cmd!!0) ++ " cannot be placed on the board. Try a different value.\n")
+        else if not (canPlaceOnTree key (cmd!!1) tree) then do
+          putStrLn((cmd!!1) ++ " at position " ++ key ++ " cannot be placed on the board. Try a different value.\n")
           play (ContinueGame (State decks tree))
         else do
           -- play game
-          play (game (cmd!!0) (cmd!!1) (State decks tree))
+          play (game key (cmd!!1) (State decks tree))
       else if (length cmd == 1) && (cmd!!0 == "q") then do
         -- end of game
         play (EndOfGame (State decks tree) False)
@@ -98,12 +99,8 @@ play (ContinueGame (State decks tree)) =
         putStrLn("Invalid input. Please enter in the format of BOARD_LOCATION CHARACTER_TO_ADD\n")
         play (ContinueGame (State decks tree))
 
-    return 0
-
 play (EndOfGame (State decks tree) outcome)
   | outcome = do
       putStrLn("YOU ARE A WINNER!\n")
-      return 0
   | otherwise = do
       putStrLn("GAME OVER\n")
-      return 0
