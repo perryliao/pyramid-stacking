@@ -40,10 +40,39 @@ gameOver decks board = (foldr (||) False (map (noValidMoves board) decks))
 
 -- updateGameState creates the next iteration of the game state
 updateGameState :: [Char] -> [Char] -> State -> State
-updateGameState k v (State (playerHand:restOfDecks) t) = do
-  let newTree = insertBoard k v t
-  let newDeck = (useHand (v!!0) playerHand) : restOfDecks
-  (State newDeck newTree)
+updateGameState k v (State deck t) = do
+  let pTree = insertBoard k v t
+  let pDeck = updateDeck deck 0 (v!!0)
+
+  aiUpdate pDeck pTree 1
+
+aiUpdate :: [[Char]] -> BSTree [Char] [Char] -> Int -> State
+aiUpdate decks tree i
+  | i > (length decks) - 1 = (State decks tree)
+  | otherwise =
+    do
+      let (k, v) = chooseBestAction (nub (decks!!i)) tree
+      let newDecks = updateDeck decks i (v!!0)
+      let newTree = insertBoard k v tree
+
+--      putStrLn ("Player " ++ show(i+1) ++ " played " ++ v ++ " at position " ++ k ++ "\n")
+      aiUpdate newDecks newTree (i+1)
+
+chooseBestAction :: [Char] -> BSTree [Char] [Char] -> ([Char], [Char])
+chooseBestAction hand tree = tupleFoldMax (map (chooseBestActionForChar tree) hand)
+  where
+    chooseBestActionForChar :: BSTree [Char] [Char] -> Char -> ([Char], [Char], Int)
+    chooseBestActionForChar tree char = ("C0", [char], 1)
+
+    tupleFoldMax :: [([Char], [Char], Int)] -> ([Char], [Char])
+    tupleFoldMax lst = tupleFoldMaxHelper lst (lst!!0)
+
+    tupleFoldMaxHelper [] (b1, b2, b) = (b1, b2)
+    tupleFoldMaxHelper ((a1, a2, a):xs) (b1, b2, b)
+      | a > b = tupleFoldMaxHelper xs (a1, a2, a)
+      | otherwise = tupleFoldMaxHelper xs (b1, b2, b)
+
+
 
 
 -- fixdel removes deleted elements from string

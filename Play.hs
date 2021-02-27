@@ -70,11 +70,11 @@ getMaxHand =
 
 
 play :: Result -> IO ()
-play (ContinueGame (State decks tree)) =
+play (ContinueGame (State decks@(playerDeck:opponentDecks) tree)) =
   do
     putStrLn ("\n")
     printTree tree
-    putStrLn ("\nYour hand: " ++ decks!!0)
+    putStrLn ("\nYour hand: " ++ playerDeck ++ "\nOpponent cards left: " ++ (foldr (\a b -> a ++ ", " ++ b) [] (map show (map length opponentDecks))))
     line <- getLine
     let cmd = words (fixdel line)
     let key = map toUpper (cmd!!0)

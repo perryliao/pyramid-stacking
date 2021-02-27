@@ -25,8 +25,17 @@ generateAllHands numPlayers size = (generateHand size) : generateAllHands (numPl
 -- generate the updated hand after placing a piece on the board
 useHand :: Char -> [Char] -> [Char]
 useHand val (x:xs)
-  | val == x = xs
+  | val == x  = xs
   | otherwise = x : (useHand val xs)
+
+-- update the deck with the playHand command
+updateDeck :: [[Char]] -> Int -> Char -> [[Char]]
+updateDeck decks playerIndex val = updateDeckHelper decks playerIndex val 0
+  where
+    updateDeckHelper decks playerIndex val i
+      | playerIndex == i       = (useHand val (decks!!i)) : updateDeckHelper decks playerIndex val (i+1)
+      | i > (length decks) - 1 = []
+      | otherwise              = (decks!!i) : updateDeckHelper decks playerIndex val (i+1)
 
 -- returns if it's possible to play the selected character in the hand
 canPlayHand :: Char -> [Char] -> Bool
