@@ -103,3 +103,50 @@ insertBoard key val (Node k0 v0 lt@(Node k1 v1 lt1 rt1) rt@(Node k2 v2 lt2 rt2))
       else
         (Node k0 v0 lt (insertBoard key val rt))
   | otherwise = Node k0 v0 lt rt
+
+
+chooseBestAction :: [Char] -> BSTree [Char] [Char] -> ([Char], [Char])
+chooseBestAction hand tree = tupleFoldMax (map (chooseBestActionForChar tree) hand)
+  where
+    chooseBestActionForChar :: BSTree [Char] [Char] -> Char -> ([Char], [Char], Int)
+    chooseBestActionForChar (Node k v Empty Empty) char
+      | v == dummyVar = (k, [char], 1)
+      | otherwise = (k, [char], 0)
+    chooseBestActionForChar (Node k v lt rt) char
+      | canPlaceOnTree k [char] tree = do
+        let rating = rateAction [char] tree
+        let (a1, a2, a) = chooseBestActionForChar lt char
+        let (b1, b2, b) = chooseBestActionForChar rt char
+        if a > b then
+          if a > rating then
+            (a1, a2, a)
+          else
+            (k, [char], rating)
+        else
+          if b > rating then
+            (b1, b2, b)
+          else
+            (k, [char], rating)
+      | otherwise = do
+         let (a1, a2, a) = chooseBestActionForChar lt char
+         let (b1, b2, b) = chooseBestActionForChar rt char
+         if a > b then
+           (a1, a2, a)
+         else
+           (b1, b2, b)
+
+    tupleFoldMax :: [([Char], [Char], Int)] -> ([Char], [Char])
+    tupleFoldMax lst = tupleFoldMaxHelper lst (lst!!0)
+
+    tupleFoldMaxHelper [] (b1, b2, b) = (b1, b2)
+    tupleFoldMaxHelper ((a1, a2, a):xs) (b1, b2, b)
+      | a > b = tupleFoldMaxHelper xs (a1, a2, a)
+      | otherwise = tupleFoldMaxHelper xs (b1, b2, b)
+
+
+rateAction :: [Char] -> BSTree [Char] [Char] -> Int
+rateAction val (Node k v Empty Empty) = 1
+rateAction val (Node k v (Node kl vl llt lrt) (Node kr vr rlt rrt))
+  | vl == val && vr == val = 3
+  | vl == val || vr == val = 2
+  | otherwise = 0

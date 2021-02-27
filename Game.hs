@@ -58,23 +58,6 @@ aiUpdate decks tree i
 --      putStrLn ("Player " ++ show(i+1) ++ " played " ++ v ++ " at position " ++ k ++ "\n")
       aiUpdate newDecks newTree (i+1)
 
-chooseBestAction :: [Char] -> BSTree [Char] [Char] -> ([Char], [Char])
-chooseBestAction hand tree = tupleFoldMax (map (chooseBestActionForChar tree) hand)
-  where
-    chooseBestActionForChar :: BSTree [Char] [Char] -> Char -> ([Char], [Char], Int)
-    chooseBestActionForChar tree char = ("C0", [char], 1)
-
-    tupleFoldMax :: [([Char], [Char], Int)] -> ([Char], [Char])
-    tupleFoldMax lst = tupleFoldMaxHelper lst (lst!!0)
-
-    tupleFoldMaxHelper [] (b1, b2, b) = (b1, b2)
-    tupleFoldMaxHelper ((a1, a2, a):xs) (b1, b2, b)
-      | a > b = tupleFoldMaxHelper xs (a1, a2, a)
-      | otherwise = tupleFoldMaxHelper xs (b1, b2, b)
-
-
-
-
 -- fixdel removes deleted elements from string
 -- from A3 solutions
 fixdel st
